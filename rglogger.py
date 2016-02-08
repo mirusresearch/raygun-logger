@@ -14,6 +14,7 @@ import jsonpickle
 from six import text_type
 
 try:
+    import django
     from django.http import HttpRequest as DjangoRequest
     USE_DJANGO = True
 except ImportError:
@@ -54,6 +55,8 @@ class Handler(logging.Handler):
             "runtimeLocation": sys.executable,
             "runtimeVersion": 'Python ' + sys.version
         }
+        if USE_DJANGO:
+            self.environment_data['frameworkVersion'] = django.get_version()
         self.machine_name = machine_name or socket.gethostname()
 
     def emit(self, log_record=None, class_name='', message='', exc_info=None, frames=None, extra_environment_data=None, user_custom_data=None, tags=None, extra_tags=None, user=None, request=None):
@@ -106,12 +109,13 @@ class Handler(logging.Handler):
                         req = local_vars['request']
                         if USE_DJANGO and isinstance(req, DjangoRequest):
                             request = {
-                                "hostName": req.META['HTTP_HOST'],
+                                "hostName": req.get_host(),
                                 "url": req.path,
                                 "httpMethod": req.method,
-                                "queryString": req.GET,
-                                "form": req.POST,
-                                "headers": req.META,
+                                "ipAddress": req.META.get('REMOTE_ADDR', '?'),
+                                "queryString": dict(req.GET.iteritems()),
+                                "form": dict(req.POST.iteritems()),
+                                "headers": dict(req.META.iteritems()),
                                 "rawData": req.body,
                             }
             stack_trace.append({
