@@ -7,16 +7,17 @@ Use Python's standard logging library to send messages to Raygun (https://raygun
   - Like any other handler, it can be filtered and have its level set.
 
 # Install
-    `pip install rglogger`
+    pip install rglogger
 
 # Usage
-    ```python
-    import logging
-    import rglogger
-    root_logger = logging.getLogger()
-    raygun_handler = rglogger.Handler('<your_api_key>')
-    root_logger.addHandler(raygun_handler)
-    ```
+```python
+import logging
+import rglogger
+
+root_logger = logging.getLogger()
+raygun_handler = rglogger.Handler('<your_api_key>')
+root_logger.addHandler(raygun_handler)
+```
 
 # Options
 `rglogger.Handler` accepts the following arguments:
@@ -34,33 +35,33 @@ Use Python's standard logging library to send messages to Raygun (https://raygun
 
 ## Log all uncaught exceptions.
 ```python
-    from rglogger import Handler
+from rglogger import Handler
 
-    raygun_handler = Handler('<your_api_key')
-    rglogger.catch_all(raygun_handler)  # Hooks into sys.excepthook for you!
+raygun_handler = Handler('<your_api_key')
+rglogger.catch_all(raygun_handler)  # Hooks into sys.excepthook for you!
 ```
 
 ## Log messages above a certain level.
 The following example only logs errors and exceptions.  Calls to logging.debug() will work, but won't be sent to Raygun.
 ```python
-    import logging
-    from rglogger import Handler
+import logging
+from rglogger import Handler
 
-    logger = logging.getLogger()
-    logger.addHandler(Handler('<your_api_key>', level=logging.ERROR))
+logger = logging.getLogger()
+logger.addHandler(Handler('<your_api_key>', level=logging.ERROR))
 ```
 
 ## Conditionally disable Raygun messages.
 Want to disable logging to Raygun if a certain condition is met on a per-message basis?  Add a filter to your Logger!  Here's an example which only logs to Raygun when Django's `DEBUG` setting is set to `False`:
 
 ```python
-    import logging
-    from rglogger import Handler
-    from django.conf import settings
+import logging
+from rglogger import Handler
+from django.conf import settings
 
-    logger = logging.getLogger()
-    logger.addFilter(lambda logrecord: not settings.DEBUG)
-    logger.addHandler(Handler('<your_api_key'))
+logger = logging.getLogger()
+logger.addFilter(lambda logrecord: not settings.DEBUG)
+logger.addHandler(Handler('<your_api_key'))
 ```
 
 # License
