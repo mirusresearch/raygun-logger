@@ -20,7 +20,7 @@ try:
 except ImportError:
     USE_DJANGO = False
 
-VERSION_INFO = (1, 1, 0)
+VERSION_INFO = (1, 2, 0)
 VERSION = ".".join(map(text_type, VERSION_INFO))
 
 
@@ -80,7 +80,8 @@ class Handler(logging.Handler):
             exc_type, exc_value, exc_traceback = exc_info
             class_name = exc_type.__name__
             message = "%s: %s" % (class_name, exc_value)
-            frames = inspect.getinnerframes(exc_traceback)
+            if exc_traceback:
+                frames = inspect.getinnerframes(exc_traceback)
 
         if not frames:
             currframe = inspect.currentframe()
