@@ -20,7 +20,7 @@ try:
 except ImportError:
     USE_DJANGO = False
 
-VERSION_INFO = (1, 2, 0)
+VERSION_INFO = (1, 2, 1)
 VERSION = ".".join(map(text_type, VERSION_INFO))
 
 
@@ -63,12 +63,6 @@ class Handler(logging.Handler):
         environment_data = copy.deepcopy(self.environment_data)
         environment_data.update(extra_environment_data or {})
 
-        client_data = {
-            "name": "raygun4py",  # Can't modify this or we lose python syntax highlighting in the UI!
-            "version": VERSION,
-            "clientUrl": "https://github.com/mirusresearch/raygun-logger"
-        }
-
         user_custom_data = user_custom_data or {}
 
         if not exc_info and not frames:
@@ -86,14 +80,13 @@ class Handler(logging.Handler):
         if not frames:
             currframe = inspect.currentframe()
             src_frame = currframe.f_back
-            # while '/logging/' in src_frame.f_code.co_filename:
             while inspect.getmodule(src_frame) is logging:
                 src_frame = src_frame.f_back
             frames = reversed(inspect.getouterframes(src_frame))
 
         if log_record:
             class_name = log_record.levelname.upper()
-            message = "%s: %s" % (class_name, log_record.message)
+            message = log_record.message
 
         stack_trace = []
         global_vars = {}
@@ -104,28 +97,14 @@ class Handler(logging.Handler):
             if not self.transmit_local_variables:
                 local_vars = {}
             else:
-                local_vars = get_locals(frame[0])
+                local_vars = getattr(frame[0], 'f_locals', {})
                 if not request:
                     if 'request' in local_vars:
                         req = local_vars['request']
                         if USE_DJANGO and isinstance(req, DjangoRequest):
-                            request = {
-                                "hostName": req.get_host(),
-                                "url": req.path,
-                                "httpMethod": req.method,
-                                "ipAddress": req.META.get('REMOTE_ADDR', '?'),
-                                "queryString": dict(req.GET.iteritems()),
-                                "form": dict(req.POST.iteritems()),
-                                "headers": dict(req.META.iteritems()),
-                                "rawData": req.body,
-                            }
-            stack_trace.append({
-                'lineNumber': frame[2],
-                'className': frame[3],
-                'fileName': frame[1],
-                'methodName': frame[4][0] if frame[4] is not None else None,
-                'localVariables': get_locals(frame[0]) if self.transmit_local_variables is True else None
-            })
+                            request = get_django_request_details(req)
+            local_vars = transform_locals(local_vars) or None
+            stack_trace.append(get_frame_details(frame, local_vars))
 
         tags = copy.deepcopy(self.tags if tags is None else tags)
         if extra_tags is not None:
@@ -138,7 +117,11 @@ class Handler(logging.Handler):
                 'tags': tags or None,
                 'machineName': self.machine_name or None,
                 'environment': environment_data,
-                'client': client_data,
+                'client': {
+                    "name": "raygun4py",  # Can't modify this or we lose python syntax highlighting in the UI!
+                    "version": VERSION,
+                    "clientUrl": "https://github.com/mirusresearch/raygun-logger"
+                },
                 'error': {
                     'className': class_name,
                     'message': message,
@@ -162,6 +145,36 @@ class Handler(logging.Handler):
         return response
 
 
+def get_frame_details(frame, local_vars):
+    return {
+        'lineNumber': frame[2],
+        'className': frame[3],
+        'fileName': frame[1],
+        'methodName': frame[4][0] if frame[4] is not None else None,
+        'localVariables': local_vars
+    }
+
+
+def get_django_request_details(req):
+    request = {
+        "hostName": req.get_host(),
+        "url": req.path,
+        "httpMethod": req.method,
+        "ipAddress": req.META.get('REMOTE_ADDR', '?'),
+        "queryString": dict(req.GET.iteritems()),
+        "form": dict(req.POST.iteritems()),
+        "headers": dict(req.META.iteritems()),
+        "rawData": '',
+    }
+    # Get raw data in a particular way. More details:
+    # https://github.com/mirusresearch/raygun4py/commit/aca4dd181073ae7b158af20f2a67ff66d1784f19
+    if hasattr(req, 'body'):
+        request['rawData'] = req.body
+    elif hasattr(req, 'raw_post_data'):
+        request['rawData'] = req.raw_post_data
+    return request
+
+
 def catch_all(rg_handler):
     def log_exception(exc_type, exc_value, exc_traceback):
         # First call the original excepthook so it gets printed
@@ -171,9 +184,8 @@ def catch_all(rg_handler):
     sys.excepthook = log_exception
 
 
-def get_locals(frame):
+def transform_locals(local_vars):
     result = {}
-    local_vars = getattr(frame, 'f_locals', {})
     for key, val in local_vars.iteritems():
         # Note that str() *can* fail; thus protect against it as much as we can.
         try:

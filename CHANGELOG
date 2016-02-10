@@ -1,0 +1,22 @@
+# Change Log
+All notable changes to this project will be documented in this file.
+This project adheres to [Semantic Versioning](http://semver.org/).
+
+## [Unreleased]
+### Changed
+- xxx
+
+## [1.2.1] - 2016-02-10
+### Changed
+- More careful django request parsing.
+- Moved PyPI Dev Status to "Beta"
+
+## [1.2.0] - 2016-02-08
+### Fixed
+- Fix bug when frames are passed in by the caller.
+### Changed
+- Improved Django integration.
+
+## [1.1.0] - 2016-02-08
+### Added
+- Initial release.
