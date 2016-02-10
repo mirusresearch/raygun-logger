@@ -20,7 +20,7 @@ try:
 except ImportError:
     USE_DJANGO = False
 
-VERSION_INFO = (1, 2, 1)
+VERSION_INFO = (1, 2, 2)
 VERSION = ".".join(map(text_type, VERSION_INFO))
 
 

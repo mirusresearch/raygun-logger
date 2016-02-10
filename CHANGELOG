@@ -6,6 +6,11 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 ### Changed
 - xxx
 
+## [1.2.2] - 2016-02-10
+### Changed
+- Internal changes to make the codebase easier to read.
+- Added cut_release.sh script for maintainer's.
+
 ## [1.2.1] - 2016-02-10
 ### Changed
 - More careful django request parsing.
