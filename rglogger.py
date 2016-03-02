@@ -16,18 +16,19 @@ from six import text_type
 try:
     import django
     from django.http import HttpRequest as DjangoRequest
+    from django.conf import settings
     USE_DJANGO = True
 except ImportError:
     USE_DJANGO = False
 
-VERSION_INFO = (1, 2, 2)
+VERSION_INFO = (1, 3, 0)
 VERSION = ".".join(map(text_type, VERSION_INFO))
 
 
 class Handler(logging.Handler):
     def __init__(
         self,
-        api_key,
+        api_key=None,
         raygun_endpoint='https://api.raygun.io/entries',
         version='',
         transmit_local_variables=True,
@@ -39,7 +40,15 @@ class Handler(logging.Handler):
         **kwargs
     ):
         super(Handler, self).__init__(*args, **kwargs)
-        self.api_key = api_key
+        if api_key:
+            self.api_key = api_key
+        else:
+            if USE_DJANGO:
+                self.api_key = getattr(settings, 'RAYGUN4PY_API_KEY', None)
+                if not self.api_key:
+                    raise Exception("raygun api key not found in settings.RAYGUN4PY_API_KEY")
+            else:
+                raise Exception("must provide an api key")
         self.raygun_endpoint = raygun_endpoint
         self.version = version
         self.transmit_local_variables = transmit_local_variables
