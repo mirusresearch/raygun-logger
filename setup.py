@@ -14,7 +14,7 @@ for line in open(path.join(here, 'rglogger.py'), encoding=('utf-8')):
 
 
 setup(
-    name='rglogger',
+    name='rglogger-fdh',
     version=".".join(map(str, VERSION_INFO)) + ".dev0",  # noqa
     description="Use Python's standard logging library to send messages to Raygun (https://raygun.io/)",
     long_description=long_description,
