@@ -150,7 +150,9 @@ class Handler(logging.Handler):
             "User-Agent": "raygun4py"
         }
 
-        response = requests.post(self.raygun_endpoint, headers=headers, data=jsonpickle.encode(msg), timeout=self.timeout)
+        # response = requests.post(self.raygun_endpoint, headers=headers, data=jsonpickle.encode(msg), timeout=self.timeout)
+        import json
+        response = requests.post(self.raygun_endpoint, headers=headers, data=json.dumps(msg), timeout=self.timeout)
         return response
 
 

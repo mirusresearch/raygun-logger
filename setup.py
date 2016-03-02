@@ -5,8 +5,9 @@ from os import path
 
 here = path.abspath(path.dirname(__file__))
 
-with open(path.join(here, 'README.rst'), encoding='utf-8') as f:
-    long_description = f.read()
+# with open(path.join(here, 'README.rst'), encoding='utf-8') as f:
+#     long_description = f.read()
+long_description = None
 
 for line in open(path.join(here, 'rglogger.py'), encoding=('utf-8')):
     if line.startswith("VERSION_INFO"):
@@ -15,7 +16,7 @@ for line in open(path.join(here, 'rglogger.py'), encoding=('utf-8')):
 
 setup(
     name='rglogger-fdh',
-    version=".".join(map(str, VERSION_INFO)) + ".dev0",  # noqa
+    version=".".join(map(str, VERSION_INFO)) + ".dev1",  # noqa
     description="Use Python's standard logging library to send messages to Raygun (https://raygun.io/)",
     long_description=long_description,
     url='https://github.com/mirusresearch/raygun-logger',
