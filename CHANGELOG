@@ -6,6 +6,10 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 ### Changed
 - xxx
 
+## [1.3.1] - 2016-07-05
+### Changed
+- Use documented getMessage() method on logging.LogRecord objects.
+
 ## [1.3.0] - 2016-03-04
 ### Changed
 - Django projects now pull API key from settings.py.

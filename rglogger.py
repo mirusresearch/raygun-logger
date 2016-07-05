@@ -21,7 +21,7 @@ try:
 except ImportError:
     USE_DJANGO = False
 
-VERSION_INFO = (1, 3, 0)
+VERSION_INFO = (1, 3, 1)
 VERSION = ".".join(map(text_type, VERSION_INFO))
 
 
@@ -95,7 +95,7 @@ class Handler(logging.Handler):
 
         if log_record:
             class_name = log_record.levelname.upper()
-            message = log_record.message
+            message = log_record.getMessage()
 
         stack_trace = []
         global_vars = {}
