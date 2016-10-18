@@ -11,7 +11,7 @@ import multiprocessing
 
 import requests
 import jsonpickle
-from six import text_type
+from six import text_type, PY2
 
 try:
     import django
@@ -21,7 +21,7 @@ try:
 except ImportError:
     USE_DJANGO = False
 
-VERSION_INFO = (1, 3, 1)
+VERSION_INFO = (1, 3, 3)
 VERSION = ".".join(map(text_type, VERSION_INFO))
 
 
@@ -60,7 +60,7 @@ class Handler(logging.Handler):
             "architecture": platform.architecture()[0],
             "cpu": platform.processor(),
             "oSVersion": "%s %s" % (platform.system(), platform.release()),
-            "environmentVariables": os.environ.data,
+            "environmentVariables": getattr(os.environ, 'data') if PY2 else os.environ,
             "runtimeLocation": sys.executable,
             "runtimeVersion": 'Python ' + sys.version
         }
@@ -143,17 +143,12 @@ class Handler(logging.Handler):
                 'userCustomData': user_custom_data,
             }
         }
-
         headers = {
             "X-ApiKey": self.api_key,
             "Content-Type": "application/json",
             "User-Agent": "raygun4py"
         }
-
-        import pprint; print ("what = %s" % pprint.pformat(msg))
         response = requests.post(self.raygun_endpoint, headers=headers, data=jsonpickle.encode(msg), timeout=self.timeout)
-        # import json
-        # response = requests.post(self.raygun_endpoint, headers=headers, data=json.dumps(msg), timeout=self.timeout)
         return response
 
 
