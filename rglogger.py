@@ -21,7 +21,7 @@ try:
 except ImportError:
     USE_DJANGO = False
 
-VERSION_INFO = (1, 3, 3)
+VERSION_INFO = (1, 3, 4)
 VERSION = ".".join(map(text_type, VERSION_INFO))
 
 
@@ -168,9 +168,9 @@ def get_django_request_details(req):
         "url": req.path,
         "httpMethod": req.method,
         "ipAddress": req.META.get('REMOTE_ADDR', '?'),
-        "queryString": dict(req.GET.iteritems()),
-        "form": dict(req.POST.iteritems()),
-        "headers": dict(req.META.iteritems()),
+        "queryString": dict(req.GET.items()),
+        "form": dict(req.POST.items()),
+        "headers": dict(req.META.items()),
         "rawData": '',
     }
     # Get raw data in a particular way. More details:
@@ -193,7 +193,7 @@ def catch_all(rg_handler):
 
 def transform_locals(local_vars):
     result = {}
-    for key, val in local_vars.iteritems():
+    for key, val in local_vars.items():
         # Note that str() *can* fail; thus protect against it as much as we can.
         try:
             result[key] = val if isinstance(val, text_type) else text_type(val)
