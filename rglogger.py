@@ -21,7 +21,7 @@ try:
 except ImportError:
     USE_DJANGO = False
 
-VERSION_INFO = (1, 3, 4)
+VERSION_INFO = (1, 4, 0)
 VERSION = ".".join(map(text_type, VERSION_INFO))
 
 
@@ -163,6 +163,7 @@ def get_frame_details(frame, local_vars):
 
 
 def get_django_request_details(req):
+    from django.http.request import RawPostDataException
     request = {
         "hostName": req.get_host(),
         "url": req.path,
@@ -175,10 +176,10 @@ def get_django_request_details(req):
     }
     # Get raw data in a particular way. More details:
     # https://github.com/mirusresearch/raygun4py/commit/aca4dd181073ae7b158af20f2a67ff66d1784f19
-    if hasattr(req, 'body'):
+    try:
         request['rawData'] = req.body
-    elif hasattr(req, 'raw_post_data'):
-        request['rawData'] = req.raw_post_data
+    except RawPostDataException:
+        request['rawData'] = '<RawPostDataException>'
     return request
 
 
