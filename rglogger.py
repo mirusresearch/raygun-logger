@@ -21,8 +21,16 @@ try:
 except ImportError:
     USE_DJANGO = False
 
-VERSION_INFO = (1, 4, 0)
+VERSION_INFO = (1, 5, 0)
 VERSION = ".".join(map(text_type, VERSION_INFO))
+
+
+class RaygunError(RuntimeError):
+    pass
+
+
+class RaygunOversizedMessage(RaygunError):
+    pass
 
 
 class Handler(logging.Handler):
@@ -36,6 +44,7 @@ class Handler(logging.Handler):
         timeout=30,
         machine_name='',
         tags=None,
+        silence_internal_errors=True,
         *args,
         **kwargs
     ):
@@ -50,6 +59,7 @@ class Handler(logging.Handler):
             else:
                 raise Exception("must provide an api key")
         self.raygun_endpoint = raygun_endpoint
+        self.silence_internal_errors = silence_internal_errors
         self.version = version
         self.transmit_local_variables = transmit_local_variables
         self.transmit_global_variables = transmit_global_variables
@@ -69,87 +79,136 @@ class Handler(logging.Handler):
         self.machine_name = machine_name or socket.gethostname()
 
     def emit(self, log_record=None, class_name='', message='', exc_info=None, frames=None, extra_environment_data=None, user_custom_data=None, tags=None, extra_tags=None, user=None, request=None):
-        environment_data = copy.deepcopy(self.environment_data)
-        environment_data.update(extra_environment_data or {})
+        try:
+            environment_data = copy.deepcopy(self.environment_data)
+            environment_data.update(extra_environment_data or {})
 
-        user_custom_data = user_custom_data or {}
+            user_custom_data = user_custom_data or {}
 
-        if not exc_info and not frames:
-            exc_info = sys.exc_info()
-            if not any(exc_info):
-                exc_info = None
+            if not exc_info and not frames:
+                exc_info = sys.exc_info()
+                if not any(exc_info):
+                    exc_info = None
 
-        if exc_info:
-            exc_type, exc_value, exc_traceback = exc_info
-            class_name = exc_type.__name__
-            message = "%s: %s" % (class_name, exc_value)
-            if exc_traceback:
-                frames = inspect.getinnerframes(exc_traceback)
+            if exc_info:
+                exc_type, exc_value, exc_traceback = exc_info
+                class_name = exc_type.__name__
+                message = "%s: %s" % (class_name, exc_value)
+                if exc_traceback:
+                    frames = inspect.getinnerframes(exc_traceback)
 
-        if not frames:
-            currframe = inspect.currentframe()
-            src_frame = currframe.f_back
-            while inspect.getmodule(src_frame) is logging:
-                src_frame = src_frame.f_back
-            frames = reversed(inspect.getouterframes(src_frame))
+            if not frames:
+                currframe = inspect.currentframe()
+                src_frame = currframe.f_back
+                while inspect.getmodule(src_frame) is logging:
+                    src_frame = src_frame.f_back
+                frames = reversed(inspect.getouterframes(src_frame))
 
-        if log_record:
-            class_name = log_record.levelname.upper()
-            message = log_record.getMessage()
+            if log_record:
+                class_name = log_record.levelname.upper()
+                message = log_record.getMessage()
 
-        stack_trace = []
-        global_vars = {}
-        request = None
-        for idx, frame in enumerate(frames):
-            if idx == 0 and self.transmit_global_variables:
-                global_vars = frame[0].f_globals
-            if not self.transmit_local_variables:
-                local_vars = {}
-            else:
-                local_vars = getattr(frame[0], 'f_locals', {})
-                if not request:
-                    if 'request' in local_vars:
-                        req = local_vars['request']
-                        if USE_DJANGO and isinstance(req, DjangoRequest):
-                            request = get_django_request_details(req)
-            local_vars = transform_locals(local_vars) or None
-            stack_trace.append(get_frame_details(frame, local_vars))
+            stack_trace = []
+            global_vars = {}
+            request = None
+            for idx, frame in enumerate(frames):
+                if idx == 0 and self.transmit_global_variables:
+                    global_vars = frame[0].f_globals
+                if not self.transmit_local_variables:
+                    local_vars = {}
+                else:
+                    local_vars = getattr(frame[0], 'f_locals', {})
+                    if not request:
+                        if 'request' in local_vars:
+                            req = local_vars['request']
+                            if USE_DJANGO and isinstance(req, DjangoRequest):
+                                request = get_django_request_details(req)
+                local_vars = transform_locals(local_vars) or None
+                stack_trace.append(get_frame_details(frame, local_vars))
 
-        tags = copy.deepcopy(self.tags if tags is None else tags)
-        if extra_tags is not None:
-            tags.extend(extra_tags)
+            tags = copy.deepcopy(self.tags if tags is None else tags)
+            if extra_tags is not None:
+                tags.extend(extra_tags)
 
-        msg = {
-            'occurredOn': datetime.datetime.utcnow().isoformat(),
-            'details': {
-                'version': self.version or "Not defined",
-                'tags': tags or None,
-                'machineName': self.machine_name or None,
-                'environment': environment_data,
-                'client': {
-                    "name": "raygun4py",  # Can't modify this or we lose python syntax highlighting in the UI!
-                    "version": VERSION,
-                    "clientUrl": "https://github.com/mirusresearch/raygun-logger"
-                },
-                'error': {
-                    'className': class_name,
-                    'message': message,
-                    'stackTrace': stack_trace,
-                    'globalVariables': global_vars,
-                    'data': ""
-                },
-                'request': request,
-                'user': user,
-                'userCustomData': user_custom_data,
+            msg = {
+                'occurredOn': datetime.datetime.utcnow().isoformat(),
+                'details': {
+                    'version': self.version or "Not defined",
+                    'tags': tags or None,
+                    'machineName': self.machine_name or None,
+                    'environment': environment_data,
+                    'client': {
+                        "name": "raygun4py",  # Can't modify this or we lose python syntax highlighting in the UI!
+                        "version": VERSION,
+                        "clientUrl": "https://github.com/mirusresearch/raygun-logger"
+                    },
+                    'error': {
+                        'className': class_name,
+                        'message': message,
+                        'stackTrace': stack_trace,
+                        'globalVariables': global_vars,
+                        'data': ""
+                    },
+                    'request': request,
+                    'user': user,
+                    'userCustomData': user_custom_data,
+                }
             }
-        }
-        headers = {
-            "X-ApiKey": self.api_key,
-            "Content-Type": "application/json",
-            "User-Agent": "raygun4py"
-        }
-        response = requests.post(self.raygun_endpoint, headers=headers, data=jsonpickle.encode(msg), timeout=self.timeout)
-        return response
+            headers = {
+                "X-ApiKey": self.api_key,
+                "Content-Type": "application/json",
+                "User-Agent": "raygun4py"
+            }
+            data = jsonpickle.encode(msg)
+            too_big = False
+            if len(data) > 75000:
+                # Max message size the Raygun API will accept is somewhere around 75K
+                # If we detect this, we try to log the error to raygun and then raise one locally.
+                too_big = True
+                msg['details']['error']['message'] = "RAYGUN ERROR TRUNCATED: " + msg['details']['error']['message']
+                msg['details']['error'].pop('globalVariables', None)
+                for fr in msg['details']['error']['stackTrace']:
+                    if len(data) < 75000:
+                        break
+                    if fr['localVariables']:
+                        fr['localVariables'] = {}
+                    data = jsonpickle.encode(msg)
+                else:
+                    # Even without all the globals/locals, the message is too big.
+                    # ...mumble...mumble...drastic times...drastic measures...
+                    data = jsonpickle.encode({
+                        'occurredOn': msg['occurredOn'],
+                        'details': {
+                            'version': self.version or "Not defined",
+                            'tags': None,
+                            'machineName': None,
+                            'environment': {},
+                            'client': {
+                                "name": "raygun4py",  # Can't modify this or we lose python syntax highlighting in the UI!
+                                "version": VERSION,
+                                "clientUrl": "https://github.com/mirusresearch/raygun-logger"
+                            },
+                            'error': {
+                                'className': 'tooBig',
+                                'message': 'Raygun message exceeds 75K',
+                                'stackTrace': [{'lineNumber': '1'}],
+                                'globalVariables': {},
+                                'data': ""
+                            },
+                            'request': None,
+                            'user': None,
+                            'userCustomData': {},
+                        }
+                    })
+            response = requests.post(self.raygun_endpoint, headers=headers, data=data, timeout=self.timeout)
+            if too_big:
+                raise RaygunOversizedMessage("Raygun Message data exceeds 75K")
+            return response
+        except Exception as e:
+            if not self.silence_internal_errors:
+                if isinstance(e, RaygunError):
+                    raise e
+                raise RaygunError(str(e))
 
 
 def get_frame_details(frame, local_vars):
