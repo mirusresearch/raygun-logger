@@ -6,6 +6,15 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 ### Changed
 - xxx
 
+## [1.6.0] - 2017-05-22
+### Changed
+ - Modify the truncation behavior to add a tag to the error details
+   instead of modifying the error message itself.  Thanks @vingiesel.
+
+## [1.5.0] - 2017-05-18
+### Changed
+ - Add truncation feature which trims down oversized messages.
+
 ## [1.4.0] - 2017-04-06
 ### Changed
  - Remove support for ancient versions of Django.

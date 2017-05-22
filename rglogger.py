@@ -21,7 +21,7 @@ try:
 except ImportError:
     USE_DJANGO = False
 
-VERSION_INFO = (1, 5, 0)
+VERSION_INFO = (1, 6, 0)
 VERSION = ".".join(map(text_type, VERSION_INFO))
 
 
