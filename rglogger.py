@@ -134,7 +134,7 @@ class Handler(logging.Handler):
                 'occurredOn': datetime.datetime.utcnow().isoformat(),
                 'details': {
                     'version': self.version or "Not defined",
-                    'tags': tags or None,
+                    'tags': tags or [],
                     'machineName': self.machine_name or None,
                     'environment': environment_data,
                     'client': {
@@ -165,7 +165,7 @@ class Handler(logging.Handler):
                 # Max message size the Raygun API will accept is somewhere around 75K
                 # If we detect this, we try to log the error to raygun and then raise one locally.
                 too_big = True
-                msg['details']['error']['message'] = "RAYGUN ERROR TRUNCATED: " + msg['details']['error']['message']
+                msg['details']['tags'].append('TRUNCATED')
                 msg['details']['error'].pop('globalVariables', None)
                 for fr in msg['details']['error']['stackTrace']:
                     if len(data) < 75000:
